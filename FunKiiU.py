@@ -63,6 +63,8 @@ parser.add_argument('-simulate', action='store_true', default=False, dest='simul
 parser.add_argument('-ticketsonly', action='store_true', default=False, dest='tickets_only',
                     help="Only download/generate tickets (and TMD and CERT), don't download any content")
 
+parser.add_argument('-vaultfile', action='store_true', default=False, dest='vaultfile',
+                    help='Get keys and tickets (if availible) from a local tar.gz file.')
 
 def bytes2human(n, f='%(value).2f %(symbol)s', symbols='customary'):
     n = int(n)
@@ -230,7 +232,7 @@ def safe_filename(filename):
 
 
 def process_title_id(title_id, title_key, name=None, region=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
-                     patch_dlc=False, simulate=False, tickets_only=False):
+                     patch_dlc=False, simulate=False, tickets_only=False, vaultfile=False):
     if name:
         dirname = '{} - {} - {}'.format(title_id, region, name)
     else:
@@ -289,6 +291,18 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
             print('ERROR: Could not download ticket from {}'.format(keysite))
             print('Skipping title...')
             return
+    elif vaultfile:
+        try:
+            vault = tarfile.open(name='vault.tar.gz', mode='r:gz')
+            for membername in vault.getnames():
+                if title in membername:
+                    vault.extract(ticketmember, path='.')
+                    vault.close()
+                    shutil.copyfile(membername, os.path.join(rawdir, 'title.tik'))
+                    break;
+        except:
+            make_ticket(title_id, title_key, title_version, os.path.join(rawdir, 'title.tik'), patch_demo, patch_dlc)
+        
     else:
         make_ticket(title_id, title_key, title_version, os.path.join(rawdir, 'title.tik'), patch_demo, patch_dlc)
 
@@ -324,9 +338,8 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
 
     log('\nTitle download complete in "{}"\n'.format(dirname))
 
-
 def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_regions=False, output_dir=None,
-         retry_count=3, patch_demo=True, patch_dlc=True, simulate=False, tickets_only=False):
+         retry_count=3, patch_demo=True, patch_dlc=True, simulate=False, tickets_only=False, vaultfile=False):
     print('*******\nFunKiiU {} by cearp and the cerea1killer\n*******\n'.format(__VERSION__))
     titlekeys_data = []
 
@@ -406,7 +419,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             print('ERROR: Could not find title or ticket for {}'.format(title_id))
             continue
 
-        process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
+        process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only, vaultfile)
 
     if download_regions:
         for title_data in titlekeys_data:
@@ -438,14 +451,15 @@ def log(output):
 
 if __name__ == '__main__':
     arguments = parser.parse_args()
-    main(titles=arguments.titles,
-         keys=arguments.keys,
-         onlinekeys=arguments.onlinekeys,
-         onlinetickets=arguments.onlinetickets,
-         download_regions=arguments.download_regions,
-         output_dir=arguments.output_dir,
-         retry_count=arguments.retry_count,
-         patch_demo=arguments.patch_demo,
-         patch_dlc=arguments.patch_dlc,
-         simulate=arguments.simulate,
-         tickets_only=arguments.tickets_only)
+    main(titles = arguments.titles,
+         keys = arguments.keys,
+         onlinekeys = arguments.onlinekeys,
+         onlinetickets = arguments.onlinetickets,
+         download_regions = arguments.download_regions,
+         output_dir = arguments.output_dir,
+         retry_count = arguments.retry_count,
+         patch_demo = arguments.patch_demo,
+         patch_dlc = arguments.patch_dlc,
+         simulate = arguments.simulate,
+         tickets_only = arguments.tickets_only,
+         vaultfile = arguments.vaultfile)
